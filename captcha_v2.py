@@ -8,6 +8,7 @@
 # Falta realizar el co.add(zenVPN.crx)
 # Cambiar el webdriver actual por el de chrome anterior.
 # Falta la funcion de escribir en el doc pero esa la saco yo.
+# 6. pip install pywin32
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -21,6 +22,7 @@ from collections import deque
 import os, sys
 import time,requests
 from bs4 import BeautifulSoup
+# import pywin32
 
 import pandas as pd
 import xlrd
@@ -197,19 +199,12 @@ def captcha(row, driver):
 
 
 def get_proxies():
-
-    operaProfile = r'C:\\Users\\sebas\\AppData\\Roaming\\Opera Software\\Opera Stable'
-    co = webdriver.ChromeOptions()
-    co.add_argument('user-data-dir=' + operaProfile)
+    co = Options()
     co.add_argument("log-level=3")
     co.add_argument("--headless")
     co.add_argument('--disable-notifications')
-    co._binary_location = r'C:\\Users\\sebas\\AppData\\Local\\Programs\\Opera\\74.0.3911.160\\opera.exe'
-    co==
-    # co._binary_location = r'C:\\Users\\sebas\\AppData\\Local\\Programs\\Opera\\55.0.2994.44\\opera.exe')
     
-    # driver = webdriver.Opera(executable_path=r'C:\\Users\\sebas\\AppData\\Local\\Programs\\Opera\\74.0.3911.160\\opera.exe',options = co)
-    driver = webdriver.Remote
+    driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options = co)
     driver.get("https://sslproxies.org/")
 
     #Pile of proxies is created
@@ -222,20 +217,18 @@ def get_proxies():
             PROXIES.append(result[0]+":"+result[1])
 
     driver.close()
-    return PROXIES        
+    return PROXIES       
 
 
 def proxy_driver():
     global ALL_PROXIES, my_ip
 
-    # co = Options()
+    co = Options()
     prox = Proxy()
 
     if len(ALL_PROXIES) == 0:
         print("--- Proxies used up (%s)" % len(ALL_PROXIES))
         ALL_PROXIES = get_proxies()
-        # Ahora no utilizamos una lista de proxies sino una vpn
-        # ALL_PROXIES = {}
         
     # temporal_index = len(ALL_PROXIES)
     # Accessing and removing last element of deque
@@ -243,10 +236,6 @@ def proxy_driver():
         pxy = ALL_PROXIES.pop()
         my_ip = pxy
         print('Proxy Actual:', pxy)
-
-        operaProfile = r'C:\\Users\\sebas\\AppData\\Roaming\\Opera Software\\Opera Stable'
-        co = webdriver.ChromeOptions()
-        co.add_argument('user-data-dir=' + operaProfile)        
 
         prox.proxy_type = ProxyType.MANUAL
         prox.autodetect = False
@@ -257,22 +246,21 @@ def proxy_driver():
 
         #print('Proxy Options', prox)
         co.Proxy = prox
-        co.add_argument("ignore-certificate-errors")        
-        co.add_argument('user-data-dir=' + operaProfile)
+        co.add_argument("ignore-certificate-errors")
+
         co.add_argument("start-maximized")
         co.add_experimental_option("excludeSwitches", ["enable-automation"])
-        co.add_experimental_option('useAutomationExtension', False)
+        co.add_experimental_option('useAutomationExtension', True)
         ua = UserAgent()
-        userAgent = ua.random
+        userAgent = ua.chrome
         co.add_argument(f'user-agent={userAgent}')
         co.add_argument('--disable-notifications')
         
         # Se agrega el add-on Buster para validar los captchas
-        # co.add_extension('./buster_extension.crx')
-        co._binary_location = r'C:\\Users\\sebas\\AppData\\Local\\Programs\\Opera\\74.0.3911.160\\opera.exe'
+        co.add_extension('./buster_extension.crx')
+        co.add_extension('./vpn.crx')
 
-    driver = webdriver.Opera(executable_path=r'C:\\Users\\sebas\\AppData\\Local\\Programs\\Opera\\74.0.3911.160\\opera.exe',options = co)
-    # driver = webdriver.Opera(ChromeDriverManager().install(), chrome_options = co)
+    driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options = co)
     # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
     return driver    
@@ -281,13 +269,15 @@ def proxy_driver():
 def main():
     global ALL_PROXIES
     ALL_PROXIES = []
-
+    myRow = 2
     createDoc()
 
-    for myRow in range(2, maximumIterations):
-        driver = proxy_driver()
+    for i in range(0, 1000):
+        driver = proxy_driver()      
         driver.get(byPassUrl)
         captcha(myRow, driver)
+    
+        driver.quit()
 
 
 main()
