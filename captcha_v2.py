@@ -24,10 +24,14 @@ import time,requests
 from bs4 import BeautifulSoup
 # import pywin32
 
+# Librerias para manejo de archivos
 import pandas as pd
 import xlrd
 import xlsxwriter
 import xlwt
+
+# Libreria para cambiar la cabecera del request a la url.
+from fake_useragent import UserAgent
 
 global maximumIterations
 maximumIterations = 3
@@ -127,13 +131,19 @@ def saveFile(content,filename):
 def captcha(row, driver):
     # driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=option)
     # driver.get(byPassUrl)
+    time.sleep(delayTime)
+    driver.switch_to.window(driver.window_handles[0])
 
     try:
         # Ingresar ID al campo
+        time.sleep(delayTime)
         numberField = driver.find_element_by_id('nuip')        
         currValue = readDoc(row)        
         numberField.send_keys(str(int(currValue)))
+        time.sleep(delayTime)
         numberField.submit()
+        time.sleep(delayTime)
+        pass
     except Exception as e:
         print("No puedo ingresar el id. No halle el campo.")
 
@@ -151,13 +161,14 @@ def captcha(row, driver):
         driver.switch_to_default_content()
         iframe = driver.find_elements_by_tag_name('iframe')[index]
         driver.switch_to.frame(iframe)
-        driver.implicitly_wait(delayTime)
+        time.sleep(delayTime)
         try:
             # Click en el boton del audio
             audioBtn = driver.find_element_by_id('recaptcha-audio-button') or driver.find_element_by_id('recaptcha-anchor')
             audioBtn.click()
             audioBtnFound = True
             audioBtnIndex = index
+            time.sleep(delayTime)
             break
         except Exception as e:
             print("Couldn't find the button.")
@@ -180,6 +191,7 @@ def captcha(row, driver):
 
                 # Ingresar texto
                 inputbtn = driver.find_element_by_id('audio-response')
+                time.sleep(delayTime)
                 inputbtn.send_keys(response)
                 inputbtn.send_keys(Keys.ENTER)
 
@@ -217,7 +229,7 @@ def get_proxies():
             PROXIES.append(result[0]+":"+result[1])
 
     driver.close()
-    return PROXIES       
+    return PROXIES
 
 
 def proxy_driver():
@@ -250,15 +262,43 @@ def proxy_driver():
 
         co.add_argument("start-maximized")
         co.add_experimental_option("excludeSwitches", ["enable-automation"])
-        co.add_experimental_option('useAutomationExtension', True)
+        co.add_experimental_option('useAutomationExtension', False)
         ua = UserAgent()
-        userAgent = ua.chrome
+        userAgent = ua.random
         co.add_argument(f'user-agent={userAgent}')
         co.add_argument('--disable-notifications')
         
         # Se agrega el add-on Buster para validar los captchas
         co.add_extension('./buster_extension.crx')
         co.add_extension('./vpn.crx')
+
+    driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options = co)
+    # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+    return driver     
+
+
+def my_driver():
+    global ALL_PROXIES
+
+    co = Options()
+
+    co.add_argument("ignore-certificate-errors")
+
+    co.add_argument("start-maximized")
+    co.add_experimental_option("excludeSwitches", ["enable-automation"])
+    co.add_experimental_option('useAutomationExtension', False)
+
+    # capabilities = webdriver.DesiredCapabilities.CHROME
+    # prox.add_to_capabilities(capabilities)
+    ua = UserAgent()
+    userAgent = ua.chrome
+    co.add_argument(f'user-agent={userAgent}')
+    co.add_argument('--disable-notifications')
+    
+    # Se agrega el add-on Buster para validar los captchas
+    co.add_extension('./buster_extension.crx')
+    co.add_extension('./vpn.crx')
 
     driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options = co)
     # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -277,7 +317,7 @@ def main():
         driver.get(byPassUrl)
         captcha(myRow, driver)
     
-        driver.quit()
+        # driver.quit()
 
 
 main()
